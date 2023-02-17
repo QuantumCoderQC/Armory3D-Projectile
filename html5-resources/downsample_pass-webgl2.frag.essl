@@ -1,0 +1,69 @@
+#version 300 es
+precision mediump float;
+precision highp int;
+
+uniform int currentMipLevel;
+uniform highp sampler2D tex;
+uniform highp vec2 screenSizeInv;
+
+out highp vec4 fragColor;
+in highp vec2 texCoord;
+
+highp float karisWeight(highp vec3 value)
+{
+    return 1.0 / (1.0 + max(value.x, max(value.y, value.z)));
+}
+
+highp vec3 downsample_dual_filter_anti_flicker(highp sampler2D tex_1, highp vec2 texCoord_1, highp vec2 texelSize)
+{
+    highp vec3 delta = texelSize.xyx * vec3(0.5, 0.5, -0.5);
+    highp vec3 c = textureLod(tex_1, texCoord_1, 0.0).xyz;
+    highp vec3 bl = textureLod(tex_1, texCoord_1 - delta.xy, 0.0).xyz;
+    highp vec3 br = textureLod(tex_1, texCoord_1 - delta.zy, 0.0).xyz;
+    highp vec3 tl = textureLod(tex_1, texCoord_1 + delta.zy, 0.0).xyz;
+    highp vec3 tr = textureLod(tex_1, texCoord_1 + delta.xy, 0.0).xyz;
+    highp float cWeight = karisWeight(c) * 4.0;
+    highp float blWeight = karisWeight(bl);
+    highp float brWeight = karisWeight(br);
+    highp float tlWeight = karisWeight(tl);
+    highp float trWeight = karisWeight(tr);
+    return (((((c * cWeight) + (bl * blWeight)) + (br * brWeight)) + (tl * tlWeight)) + (tr * trWeight)) / vec3((((cWeight + blWeight) + brWeight) + tlWeight) + trWeight);
+}
+
+highp vec3 downsample_dual_filter(highp sampler2D tex_1, highp vec2 texCoord_1, highp vec2 texelSize)
+{
+    highp vec3 delta = texelSize.xyx * vec3(0.5, 0.5, -0.5);
+    highp vec3 result = textureLod(tex_1, texCoord_1, 0.0).xyz * 4.0;
+    result += textureLod(tex_1, texCoord_1 - delta.xy, 0.0).xyz;
+    result += textureLod(tex_1, texCoord_1 - delta.zy, 0.0).xyz;
+    result += textureLod(tex_1, texCoord_1 + delta.zy, 0.0).xyz;
+    result += textureLod(tex_1, texCoord_1 + delta.xy, 0.0).xyz;
+    return result * 0.125;
+}
+
+void main()
+{
+    if (true && (currentMipLevel == 0))
+    {
+        highp vec3 _197 = downsample_dual_filter_anti_flicker(tex, texCoord, screenSizeInv);
+        fragColor = vec4(_197.x, _197.y, _197.z, fragColor.w);
+    }
+    else
+    {
+        highp vec3 _203 = downsample_dual_filter(tex, texCoord, screenSizeInv);
+        fragColor = vec4(_203.x, _203.y, _203.z, fragColor.w);
+    }
+    if (currentMipLevel == 0)
+    {
+        highp float brightness = max(fragColor.x, max(fragColor.y, fragColor.z));
+        highp float softeningCurve = (brightness - 0.800000011920928955078125) + 0.5;
+        softeningCurve = clamp(softeningCurve, 0.0, 1.0);
+        softeningCurve = (softeningCurve * softeningCurve) / 2.00006198883056640625;
+        highp float contributionFactor = max(softeningCurve, brightness - 0.800000011920928955078125);
+        contributionFactor /= max(6.1999999161344021558761596679688e-05, brightness);
+        highp vec3 _245 = fragColor.xyz * contributionFactor;
+        fragColor = vec4(_245.x, _245.y, _245.z, fragColor.w);
+    }
+    fragColor.w = 1.0;
+}
+

@@ -1,0 +1,51 @@
+#version 300 es
+precision mediump float;
+precision highp int;
+
+in highp vec3 wnormal;
+out highp vec4 fragColor[2];
+
+highp vec2 octahedronWrap(highp vec2 v)
+{
+    return (vec2(1.0) - abs(v.yx)) * vec2((v.x >= 0.0) ? 1.0 : (-1.0), (v.y >= 0.0) ? 1.0 : (-1.0));
+}
+
+highp float packFloatInt16(highp float f, uint i)
+{
+    uint bitsInt = i << 12u;
+    uint bitsFloat = uint(f * 4095.0);
+    return float(bitsInt | bitsFloat);
+}
+
+highp float packFloat2(highp float f1, highp float f2)
+{
+    return floor(f1 * 255.0) + min(f2, 0.9900000095367431640625);
+}
+
+void main()
+{
+    highp vec3 n = normalize(wnormal);
+    highp vec3 basecol = vec3(0.0);
+    highp float roughness = 0.0;
+    highp float metallic = 0.0;
+    highp float occlusion = 1.0;
+    highp float specular = 0.0;
+    highp vec3 emissionCol = vec3(4.0, 3.902896881103515625, 0.3578692376613616943359375);
+    n /= vec3((abs(n.x) + abs(n.y)) + abs(n.z));
+    highp vec2 _103;
+    if (n.z >= 0.0)
+    {
+        _103 = n.xy;
+    }
+    else
+    {
+        _103 = octahedronWrap(n.xy);
+    }
+    n = vec3(_103.x, _103.y, n.z);
+    uint matid = 0u;
+    matid = 1u;
+    basecol = emissionCol;
+    fragColor[0] = vec4(n.xy, roughness, packFloatInt16(metallic, matid));
+    fragColor[1] = vec4(basecol, packFloat2(occlusion, specular));
+}
+

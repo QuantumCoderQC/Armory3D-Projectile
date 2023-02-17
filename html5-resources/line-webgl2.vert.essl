@@ -1,0 +1,14 @@
+#version 300 es
+
+uniform mat4 ViewProjection;
+
+out vec3 color;
+in vec3 col;
+in vec3 pos;
+
+void main()
+{
+    color = col;
+    gl_Position = ViewProjection * vec4(pos, 1.0);
+}
+

@@ -1,0 +1,38 @@
+#version 300 es
+precision mediump float;
+precision highp int;
+
+uniform highp sampler2D tex;
+uniform highp vec2 screenSizeInv;
+uniform highp float sampleScale;
+uniform int currentMipLevel;
+
+out highp vec4 fragColor;
+in highp vec2 texCoord;
+
+highp vec3 upsample_dual_filter(highp sampler2D tex_1, highp vec2 texCoord_1, highp vec2 texelSize, highp float sampleScale_1)
+{
+    highp vec2 delta = texelSize * sampleScale_1;
+    highp vec3 result = textureLod(tex_1, texCoord_1 + vec2((-delta.x) * 2.0, 0.0), 0.0).xyz;
+    result += (textureLod(tex_1, texCoord_1 + vec2(-delta.x, delta.y), 0.0).xyz * 2.0);
+    result += textureLod(tex_1, texCoord_1 + vec2(0.0, delta.y * 2.0), 0.0).xyz;
+    result += (textureLod(tex_1, texCoord_1 + delta, 0.0).xyz * 2.0);
+    result += textureLod(tex_1, texCoord_1 + vec2(delta.x * 2.0, 0.0), 0.0).xyz;
+    result += (textureLod(tex_1, texCoord_1 + vec2(delta.x, -delta.y), 0.0).xyz * 2.0);
+    result += textureLod(tex_1, texCoord_1 + vec2(0.0, (-delta.y) * 2.0), 0.0).xyz;
+    result += (textureLod(tex_1, texCoord_1 - delta, 0.0).xyz * 2.0);
+    return result * 0.083333335816860198974609375;
+}
+
+void main()
+{
+    highp vec3 _130 = upsample_dual_filter(tex, texCoord, screenSizeInv, sampleScale);
+    fragColor = vec4(_130.x, _130.y, _130.z, fragColor.w);
+    if (currentMipLevel == 0)
+    {
+        highp vec3 _145 = fragColor.xyz * 0.5;
+        fragColor = vec4(_145.x, _145.y, _145.z, fragColor.w);
+    }
+    fragColor.w = 1.0;
+}
+

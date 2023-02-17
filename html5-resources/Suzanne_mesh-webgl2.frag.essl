@@ -1,0 +1,57 @@
+#version 300 es
+precision mediump float;
+precision highp int;
+
+const vec3 _95[3] = vec3[](vec3(1.0, 0.0, 0.009824897162616252899169921875), vec3(0.0, 1.0, 0.086077153682708740234375), vec3(0.0, 1.0, 0.086077153682708740234375));
+const float _108[3] = float[](0.0, 1.0, 1.0);
+
+uniform highp float objectInfoRandom;
+
+in highp vec3 wnormal;
+out highp vec4 fragColor[2];
+
+highp vec2 octahedronWrap(highp vec2 v)
+{
+    return (vec2(1.0) - abs(v.yx)) * vec2((v.x >= 0.0) ? 1.0 : (-1.0), (v.y >= 0.0) ? 1.0 : (-1.0));
+}
+
+highp float packFloatInt16(highp float f, uint i)
+{
+    uint bitsInt = i << 12u;
+    uint bitsFloat = uint(f * 4095.0);
+    return float(bitsInt | bitsFloat);
+}
+
+highp float packFloat2(highp float f1, highp float f2)
+{
+    return floor(f1 * 255.0) + min(f2, 0.9900000095367431640625);
+}
+
+void main()
+{
+    highp vec3 n = normalize(wnormal);
+    highp float ObjectInfo_Random_res = objectInfoRandom;
+    highp float ColorRamp_fac = ObjectInfo_Random_res;
+    int ColorRamp_i = 0 + int(ColorRamp_fac > 1.0);
+    highp vec3 ColorRamp_Color_res = mix(_95[ColorRamp_i], _95[ColorRamp_i + 1], vec3(max((ColorRamp_fac - _108[ColorRamp_i]) * (1.0 / (_108[ColorRamp_i + 1] - _108[ColorRamp_i])), 0.0)));
+    highp vec3 basecol = ColorRamp_Color_res;
+    highp float roughness = 0.5;
+    highp float metallic = 0.0;
+    highp float occlusion = 1.0;
+    highp float specular = 0.5;
+    highp vec3 emissionCol = vec3(0.0);
+    n /= vec3((abs(n.x) + abs(n.y)) + abs(n.z));
+    highp vec2 _158;
+    if (n.z >= 0.0)
+    {
+        _158 = n.xy;
+    }
+    else
+    {
+        _158 = octahedronWrap(n.xy);
+    }
+    n = vec3(_158.x, _158.y, n.z);
+    fragColor[0] = vec4(n.xy, roughness, packFloatInt16(metallic, 0u));
+    fragColor[1] = vec4(basecol, packFloat2(occlusion, specular));
+}
+
